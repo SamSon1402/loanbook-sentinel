@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoanBook-Sentinel — Real-Time Portfolio Health | Orbii</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #f59e0b;
+            --primary-glow: rgba(245, 158, 11, 0.4);
+            --secondary: #0891b2;
+            --accent: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --danger: #dc2626;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-elevated: #1c1c28;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #2a2a3a;
+            --orbii-gradient: linear-gradient(135deg, #f59e0b 0%, #dc2626 50%, #0891b2 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at 0% 0%, rgba(245, 158, 11, 0.10) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(220, 38, 38, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(8, 145, 178, 0.04) 0%, transparent 70%);
+        }
+
+        .header {
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo { display: flex; align-items: center; gap: 0.75rem; }
+
+        .logo-icon {
+            width: 46px; height: 46px;
+            background: var(--orbii-gradient);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            position: relative;
+        }
+
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: var(--orbii-gradient);
+            border-radius: 14px;
+            z-index: -1;
+            opacity: 0.5;
+            filter: blur(8px);
+        }
+
+        .logo-text {
+            font-size: 1.5rem; font-weight: 800;
+            background: var(--orbii-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-subtitle {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 500;
+        }
+
+        .header-badges { display: flex; gap: 0.4rem; }
+
+        .badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            font-family: 'Fira Code', monospace;
+        }
+
+        .badge.live {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .badge.live::before {
+            content: '';
+            display: inline-block;
+            width: 6px; height: 6px;
+            background: var(--primary);
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--primary-glow); }
+            50% { opacity: 0.6; box-shadow: 0 0 0 8px transparent; }
+        }
+
+        .main { max-width: 1800px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+        .hero { text-align: center; margin-bottom: 1.5rem; }
+
+        .hero h1 {
+            font-size: 2.4rem; font-weight: 800; margin-bottom: 0.4rem;
+            background: var(--orbii-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p { color: var(--text-secondary); font-size: 1rem; }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 1300px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(180deg, rgba(28, 28, 40, 0.6) 0%, transparent 100%);
+        }
+
+        .card-title {
+            font-size: 0.9rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        .card-body { padding: 1.25rem; }
+
+        /* Portfolio Map */
+        .portfolio-container {
+            position: relative;
+            background: var(--bg-dark);
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            margin-bottom: 1rem;
+            padding: 1rem;
+        }
+
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            gap: 4px;
+            height: 100%;
+        }
+
+        .loan-cell {
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .loan-cell.healthy { background: rgba(16, 185, 129, 0.4); border: 1px solid rgba(16, 185, 129, 0.6); }
+        .loan-cell.warning { background: rgba(245, 158, 11, 0.4); border: 1px solid rgba(245, 158, 11, 0.6); }
+        .loan-cell.risk { background: rgba(220, 38, 38, 0.4); border: 1px solid rgba(220, 38, 38, 0.6); }
+        .loan-cell.default { 
+            background: rgba(220, 38, 38, 0.8); 
+            border: 1px solid #dc2626;
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.6);
+            animation: defaultPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes defaultPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .loan-cell:hover { transform: scale(1.15); z-index: 10; }
+
+        .stats-bar {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.95));
+            padding: 2rem 1rem 1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-item { text-align: center; }
+        .stat-value {
+            font-size: 1.1rem; font-weight: 700;
+            font-family: 'Fira Code', monospace;
+        }
+        .stat-value.portfolio { color: var(--primary); }
+        .stat-value.active { color: var(--secondary); }
+        .stat-value.default { color: var(--danger); }
+        .stat-value.alerts { color: var(--warning); }
+
+        .stat-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'Sora', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .control-btn:hover {
+            border-color: var(--primary);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .control-btn.active {
+            border-color: var(--primary);
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--primary);
+        }
+
+        .control-btn.danger:hover {
+            border-color: var(--danger);
+            background: rgba(220, 38, 38, 0.1);
+        }
+
+        /* Cohort Curve */
+        .cohort-section {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .cohort-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .cohort-title { font-size: 0.8rem; font-weight: 600; }
+        .cohort-meta {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+        }
+
+        .cohort-svg {
+            width: 100%;
+            height: 120px;
+        }
+
+        /* Sidebar */
+        .sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+        .model-info {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .model-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .model-icon {
+            width: 48px; height: 48px;
+            background: var(--orbii-gradient);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .model-name { font-size: 1rem; font-weight: 700; }
+        .model-version {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+        }
+
+        .model-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .model-stat {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .model-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: 'Fira Code', monospace;
+            color: var(--primary);
+        }
+
+        .model-stat-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Sector heatmap */
+        .sector-section {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 3px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+        .sector-cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .sector-cell:hover {
+            transform: scale(1.3);
+            z-index: 10;
+            position: relative;
+        }
+
+        /* PD Drift Gauge */
+        .drift-section {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .drift-meter {
+            position: relative;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drift-arc {
+            width: 160px;
+            height: 80px;
+            border: 10px solid var(--bg-dark);
+            border-bottom: none;
+            border-radius: 160px 160px 0 0;
+            position: relative;
+        }
+
+        .drift-fill {
+            position: absolute;
+            inset: -10px;
+            border: 10px solid var(--primary);
+            border-bottom: none;
+            border-radius: 160px 160px 0 0;
+            clip-path: polygon(0 100%, 0 0, 50% 0, 50% 100%);
+            transition: clip-path 0.5s, border-color 0.5s;
+        }
+
+        .drift-value {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.6rem;
+            font-weight: 800;
+            font-family: 'Fira Code', monospace;
+            color: var(--primary);
+        }
+
+        .drift-label {
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        /* Detection Log */
+        .alert-log {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .log-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-elevated);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--danger);
+            animation: slideIn 0.3s ease;
+        }
+
+        .log-item.warning { border-left-color: var(--warning); }
+        .log-item.info { border-left-color: var(--secondary); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-icon {
+            width: 36px; height: 36px;
+            background: rgba(220, 38, 38, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .log-item.warning .log-icon { background: rgba(245, 158, 11, 0.2); }
+        .log-item.info .log-icon { background: rgba(8, 145, 178, 0.2); }
+
+        .log-content { flex: 1; }
+        .log-title { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.15rem; }
+        .log-meta {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+        }
+        .log-amount {
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            color: var(--danger);
+        }
+        .log-item.warning .log-amount { color: var(--warning); }
+        .log-item.info .log-amount { color: var(--secondary); }
+
+        /* Processing Overlay */
+        .processing-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.97);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .processing-overlay.active { display: flex; }
+
+        .scan-animation {
+            width: 140px;
+            height: 140px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            margin-bottom: 2rem;
+        }
+
+        .scan-cell {
+            background: var(--primary);
+            border-radius: 3px;
+            animation: scanPulse 1.5s ease-in-out infinite;
+        }
+
+        .scan-cell:nth-child(odd) { background: var(--secondary); }
+        .scan-cell:nth-child(3n) { background: var(--accent); }
+
+        .scan-cell:nth-child(1) { animation-delay: 0s; }
+        .scan-cell:nth-child(2) { animation-delay: 0.1s; }
+        .scan-cell:nth-child(3) { animation-delay: 0.2s; }
+        .scan-cell:nth-child(4) { animation-delay: 0.3s; }
+        .scan-cell:nth-child(5) { animation-delay: 0.4s; }
+        .scan-cell:nth-child(6) { animation-delay: 0.5s; }
+        .scan-cell:nth-child(7) { animation-delay: 0.6s; }
+        .scan-cell:nth-child(8) { animation-delay: 0.7s; }
+        .scan-cell:nth-child(9) { animation-delay: 0.8s; }
+        .scan-cell:nth-child(10) { animation-delay: 0.9s; }
+        .scan-cell:nth-child(11) { animation-delay: 1.0s; }
+        .scan-cell:nth-child(12) { animation-delay: 1.1s; }
+        .scan-cell:nth-child(13) { animation-delay: 1.2s; }
+        .scan-cell:nth-child(14) { animation-delay: 1.3s; }
+        .scan-cell:nth-child(15) { animation-delay: 1.4s; }
+        .scan-cell:nth-child(16) { animation-delay: 1.5s; }
+        .scan-cell:nth-child(17) { animation-delay: 1.6s; }
+        .scan-cell:nth-child(18) { animation-delay: 1.7s; }
+        .scan-cell:nth-child(19) { animation-delay: 1.8s; }
+        .scan-cell:nth-child(20) { animation-delay: 1.9s; }
+        .scan-cell:nth-child(21) { animation-delay: 2.0s; }
+        .scan-cell:nth-child(22) { animation-delay: 2.1s; }
+        .scan-cell:nth-child(23) { animation-delay: 2.2s; }
+        .scan-cell:nth-child(24) { animation-delay: 2.3s; }
+        .scan-cell:nth-child(25) { animation-delay: 2.4s; }
+
+        @keyframes scanPulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .processing-text { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .processing-stage {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .processing-progress {
+            width: 280px;
+            height: 5px;
+            background: var(--bg-elevated);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .processing-bar {
+            height: 100%;
+            background: var(--orbii-gradient);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.85rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-icon { font-size: 1.3rem; }
+        .toast-title { font-size: 0.85rem; font-weight: 600; }
+        .toast-message { font-size: 0.7rem; color: var(--text-muted); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🛡️</div>
+                <div>
+                    <div class="logo-text">LoanBook-Sentinel</div>
+                    <div class="logo-subtitle">Orbii Portfolio Intelligence</div>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge live">● Live Monitoring</span>
+                <span class="badge">Cohort Risk Decay</span>
+                <span class="badge">GCC SME Portfolio</span>
+                <span class="badge">RYN-Compatible</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="hero">
+            <h1>🛡️ Real-Time Loan Book Health</h1>
+            <p>Monitor 5,000+ active SME loans across the GCC — surface vintage decay, sector concentration, and behavioral anomalies before they hit your P&amp;L</p>
+        </div>
+
+        <div class="workspace">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📊 Portfolio Live Map</h3>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); font-family: 'Fira Code';">84 cohorts • UAE + KSA</span>
+                </div>
+                <div class="card-body">
+                    <div class="portfolio-container">
+                        <div class="portfolio-grid" id="portfolioGrid"></div>
+                        <div class="stats-bar">
+                            <div class="stat-item">
+                                <div class="stat-value portfolio" id="portfolioValue">$0M</div>
+                                <div class="stat-label">Portfolio AUM</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value active" id="activeLoans">0</div>
+                                <div class="stat-label">Active Loans</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value default" id="defaultRate">0.0%</div>
+                                <div class="stat-label">30D Default Rate</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value alerts" id="alertsValue">0</div>
+                                <div class="stat-label">Active Alerts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button class="control-btn" id="startBtn" onclick="toggleMonitor()">
+                            <span id="startIcon">▶️</span>
+                            <span id="startText">Start Monitoring</span>
+                        </button>
+                        <button class="control-btn" onclick="resetMonitor()">🔄 Reset</button>
+                        <button class="control-btn" onclick="injectDefault()">⚠️ Inject Default</button>
+                        <button class="control-btn danger" onclick="triggerAnomaly()">🚨 Sector Anomaly</button>
+                    </div>
+
+                    <div class="cohort-section">
+                        <div class="cohort-header">
+                            <span class="cohort-title">📈 Vintage Decay Curve — Last 24h</span>
+                            <span class="cohort-meta" id="cohortMeta">Expected vs Actual PD</span>
+                        </div>
+                        <svg class="cohort-svg" viewBox="0 0 600 120" id="cohortChart">
+                            <!-- Grid lines -->
+                            <line x1="0" y1="30" x2="600" y2="30" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="2,4"/>
+                            <line x1="0" y1="60" x2="600" y2="60" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="2,4"/>
+                            <line x1="0" y1="90" x2="600" y2="90" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="2,4"/>
+                            <!-- Expected curve -->
+                            <path id="expectedCurve" d="M 0 80 Q 150 75, 300 70 T 600 60" stroke="#0891b2" stroke-width="2" fill="none" stroke-dasharray="4,4"/>
+                            <!-- Actual curve -->
+                            <path id="actualCurve" d="M 0 80 Q 150 78, 300 75 T 600 72" stroke="#f59e0b" stroke-width="2.5" fill="none"/>
+                            <!-- Fill area between curves -->
+                            <path id="deltaFill" d="M 0 80 Q 150 75, 300 70 T 600 60 L 600 72 Q 450 73, 300 75 T 0 80 Z" fill="rgba(245, 158, 11, 0.1)"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🧠 Risk Engine</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="model-info">
+                            <div class="model-header">
+                                <div class="model-icon">🛡️</div>
+                                <div>
+                                    <div class="model-name">Sentinel-RYN</div>
+                                    <div class="model-version">v3.2.1 • Isolation Forest + GraphNN</div>
+                                </div>
+                            </div>
+                            <div class="model-stats">
+                                <div class="model-stat">
+                                    <div class="model-stat-value" id="scanLatency">—</div>
+                                    <div class="model-stat-label">Scan (ms)</div>
+                                </div>
+                                <div class="model-stat">
+                                    <div class="model-stat-value">98.4%</div>
+                                    <div class="model-stat-label">Recall</div>
+                                </div>
+                                <div class="model-stat">
+                                    <div class="model-stat-value">1.2%</div>
+                                    <div class="model-stat-label">False Pos</div>
+                                </div>
+                                <div class="model-stat">
+                                    <div class="model-stat-value">5min</div>
+                                    <div class="model-stat-label">Refresh</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔥 Sector Concentration</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="sector-section">
+                            <div class="cohort-header">
+                                <span class="cohort-title">Risk × Exposure Heatmap</span>
+                                <span class="cohort-meta">8 sectors × 8 emirates</span>
+                            </div>
+                            <div class="sector-grid" id="sectorGrid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📉 PD Drift</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="drift-section">
+                            <div class="drift-meter">
+                                <div class="drift-arc">
+                                    <div class="drift-fill" id="driftFill"></div>
+                                </div>
+                                <div class="drift-value" id="driftValue">—</div>
+                            </div>
+                            <div class="drift-label">PD Drift vs Baseline Cohort</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🚨 Alert Stream</h3>
+                        <span style="font-size: 0.65rem; color: var(--text-muted);" id="logCount">0 alerts</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert-log" id="alertLog">
+                            <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">
+                                Start monitoring to see live alerts
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="scan-animation">
+            <div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div>
+            <div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div>
+            <div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div>
+            <div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div>
+            <div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div><div class="scan-cell"></div>
+        </div>
+        <div class="processing-text">Initializing Loan Book Sentinel...</div>
+        <div class="processing-stage" id="processingStage">Loading portfolio...</div>
+        <div class="processing-progress">
+            <div class="processing-bar" id="processingBar"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <span class="toast-icon">✅</span>
+        <div class="toast-content">
+            <div class="toast-title" id="toastTitle">Success!</div>
+            <div class="toast-message" id="toastMessage">Monitoring started</div>
+        </div>
+    </div>
+
+    <script>
+        let isMonitoring = false;
+        let mainInterval = null;
+        let portfolioValue = 247.8;
+        let activeLoans = 5142;
+        let defaultRate = 1.8;
+        let alertCount = 0;
+        let driftScore = 12;
+        let logEntries = [];
+
+        const sectors = ['Retail', 'F&B', 'Logistics', 'Construction', 'Healthcare', 'Tech', 'Manufacturing', 'Trading'];
+        const emirates = ['Abu Dhabi', 'Dubai', 'Sharjah', 'Riyadh', 'Jeddah', 'Doha', 'Manama', 'Muscat'];
+        const merchants = ['Al Futtaim Trading', 'Emaar Retail', 'Majid Logistics', 'Sharaf SME', 'Lulu Group', 
+                           'Apparel Co.', 'Tasheelat F&B', 'Damac Const.', 'Aldar Services', 'Etisalat Tech',
+                           'Mubadala SME', 'Salam Health', 'Dubai Trading', 'Nakheel Retail', 'ENOC Services'];
+
+        function init() {
+            generatePortfolioGrid();
+            generateSectorGrid();
+            updateCohortChart();
+        }
+
+        function generatePortfolioGrid() {
+            const grid = document.getElementById('portfolioGrid');
+            let cells = '';
+            for (let i = 0; i < 84; i++) {
+                const r = Math.random();
+                let cls = 'healthy';
+                if (r > 0.95) cls = 'risk';
+                else if (r > 0.85) cls = 'warning';
+                cells += `<div class="loan-cell ${cls}" data-idx="${i}"></div>`;
+            }
+            grid.innerHTML = cells;
+        }
+
+        function generateSectorGrid() {
+            const grid = document.getElementById('sectorGrid');
+            let cells = '';
+            for (let i = 0; i < 64; i++) {
+                const intensity = Math.random();
+                let hue, lightness;
+                if (intensity > 0.85) { hue = 0; lightness = 35 + intensity * 25; }
+                else if (intensity > 0.65) { hue = 35; lightness = 30 + intensity * 30; }
+                else { hue = 160; lightness = 20 + intensity * 35; }
+                cells += `<div class="sector-cell" style="background: hsl(${hue}, 70%, ${lightness}%);"></div>`;
+            }
+            grid.innerHTML = cells;
+        }
+
+        function updateSectorGrid() {
+            const cells = document.querySelectorAll('.sector-cell');
+            cells.forEach(c => {
+                const intensity = Math.random();
+                let hue, lightness;
+                if (intensity > 0.85) { hue = 0; lightness = 35 + intensity * 25; }
+                else if (intensity > 0.65) { hue = 35; lightness = 30 + intensity * 30; }
+                else { hue = 160; lightness = 20 + intensity * 35; }
+                c.style.background = `hsl(${hue}, 70%, ${lightness}%)`;
+            });
+        }
+
+        function updateCohortChart() {
+            // Animate the actual curve based on drift
+            const driftMult = 1 + (driftScore / 100) * 1.5;
+            const path = `M 0 80 Q 150 ${78 - driftScore * 0.4}, 300 ${75 - driftScore * 0.6} T 600 ${72 - driftScore * 0.8 * driftMult}`;
+            document.getElementById('actualCurve').setAttribute('d', path);
+            
+            const deltaPath = `M 0 80 Q 150 75, 300 70 T 600 60 L 600 ${72 - driftScore * 0.8 * driftMult} Q 450 ${73 - driftScore * 0.5}, 300 ${75 - driftScore * 0.6} T 0 80 Z`;
+            document.getElementById('deltaFill').setAttribute('d', deltaPath);
+        }
+
+        function toggleMonitor() {
+            if (!isMonitoring) startMonitor();
+            else stopMonitor();
+        }
+
+        function startMonitor() {
+            const overlay = document.getElementById('processingOverlay');
+            const bar = document.getElementById('processingBar');
+            const stage = document.getElementById('processingStage');
+
+            overlay.classList.add('active');
+            const stages = [
+                'Loading portfolio snapshot...',
+                'Connecting to bank feed APIs...',
+                'Spinning up RYN inference workers...',
+                'Computing vintage curves...',
+                'Indexing graph relationships...',
+                'Warming Prometheus exporters...',
+                'Starting real-time scan loop...'
+            ];
+
+            let progress = 0;
+            let stageIndex = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 18 + 8;
+                if (progress > 100) progress = 100;
+                bar.style.width = progress + '%';
+                const newStage = Math.floor((progress / 100) * stages.length);
+                if (newStage !== stageIndex && newStage < stages.length) {
+                    stageIndex = newStage;
+                    stage.textContent = stages[stageIndex];
+                }
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        overlay.classList.remove('active');
+                        beginMonitor();
+                    }, 300);
+                }
+            }, 80);
+        }
+
+        function beginMonitor() {
+            isMonitoring = true;
+            document.getElementById('startIcon').textContent = '⏸️';
+            document.getElementById('startText').textContent = 'Pause Monitoring';
+            document.getElementById('startBtn').classList.add('active');
+
+            mainInterval = setInterval(() => {
+                // Update KPIs
+                portfolioValue += (Math.random() - 0.4) * 0.8;
+                activeLoans += Math.floor((Math.random() - 0.3) * 8);
+                defaultRate += (Math.random() - 0.5) * 0.05;
+                defaultRate = Math.max(0.5, Math.min(5, defaultRate));
+
+                document.getElementById('portfolioValue').textContent = '$' + portfolioValue.toFixed(1) + 'M';
+                document.getElementById('activeLoans').textContent = activeLoans.toLocaleString();
+                document.getElementById('defaultRate').textContent = defaultRate.toFixed(2) + '%';
+                document.getElementById('scanLatency').textContent = Math.floor(45 + Math.random() * 35);
+
+                // Random portfolio cell changes
+                if (Math.random() > 0.5) {
+                    const cells = document.querySelectorAll('.loan-cell');
+                    const idx = Math.floor(Math.random() * cells.length);
+                    const cell = cells[idx];
+                    cell.classList.remove('healthy', 'warning', 'risk', 'default');
+                    const r = Math.random();
+                    if (r > 0.96) cell.classList.add('default');
+                    else if (r > 0.85) cell.classList.add('risk');
+                    else if (r > 0.7) cell.classList.add('warning');
+                    else cell.classList.add('healthy');
+                }
+
+                // Random events
+                if (Math.random() > 0.65) {
+                    generateEvent();
+                }
+
+                // Update drift
+                driftScore += (Math.random() - 0.5) * 2;
+                driftScore = Math.max(5, Math.min(75, driftScore));
+                updateDrift();
+                updateCohortChart();
+                
+                if (Math.random() > 0.7) updateSectorGrid();
+            }, 1500);
+
+            showToast('Sentinel Active', 'Scanning 5,142 active loans every 5 minutes');
+        }
+
+        function stopMonitor() {
+            isMonitoring = false;
+            document.getElementById('startIcon').textContent = '▶️';
+            document.getElementById('startText').textContent = 'Resume Monitoring';
+            document.getElementById('startBtn').classList.remove('active');
+            if (mainInterval) clearInterval(mainInterval);
+            showToast('Sentinel Paused', 'Live monitoring suspended');
+        }
+
+        function generateEvent() {
+            const types = [
+                { type: 'default', icon: '🔴', cls: '', amount: () => '-$' + (Math.random() * 50 + 10).toFixed(1) + 'K' },
+                { type: 'warning', icon: '⚠️', cls: 'warning', amount: () => 'DPD ' + Math.floor(Math.random() * 60 + 30) + 'd' },
+                { type: 'info', icon: 'ℹ️', cls: 'info', amount: () => 'Score ' + Math.floor(40 + Math.random() * 30) },
+                { type: 'anomaly', icon: '🚨', cls: '', amount: () => 'σ=' + (2.5 + Math.random() * 2).toFixed(1) }
+            ];
+            const ev = types[Math.floor(Math.random() * types.length)];
+            const merchant = merchants[Math.floor(Math.random() * merchants.length)];
+            const sector = sectors[Math.floor(Math.random() * sectors.length)];
+
+            const titles = {
+                default: ['Default Recorded', 'Charge-off Flagged', 'Recovery Required'],
+                warning: ['DPD Threshold Breach', 'Repayment Delay', 'Cash Drop Detected'],
+                info: ['Score Recalc', 'New Cohort Entry', 'Refinance Approved'],
+                anomaly: ['Behavioral Anomaly', 'Sector Cluster Risk', 'Graph Anomaly']
+            };
+            const title = titles[ev.type][Math.floor(Math.random() * 3)];
+
+            if (ev.type === 'default' || ev.type === 'anomaly') {
+                alertCount++;
+                document.getElementById('alertsValue').textContent = alertCount;
+            }
+
+            addLogEntry(ev.icon, title, `${merchant} • ${sector}`, ev.amount(), ev.cls);
+        }
+
+        function addLogEntry(icon, title, meta, amount, cls) {
+            const log = document.getElementById('alertLog');
+            const entry = document.createElement('div');
+            entry.className = `log-item ${cls}`;
+            entry.innerHTML = `
+                <div class="log-icon">${icon}</div>
+                <div class="log-content">
+                    <div class="log-title">${title}</div>
+                    <div class="log-meta">${meta} • ${new Date().toLocaleTimeString()}</div>
+                </div>
+                <div class="log-amount">${amount}</div>
+            `;
+            if (log.firstChild && log.firstChild.style) log.innerHTML = '';
+            log.insertBefore(entry, log.firstChild);
+            logEntries.unshift(entry);
+            if (logEntries.length > 20) {
+                const removed = logEntries.pop();
+                removed.remove();
+            }
+            document.getElementById('logCount').textContent = `${Math.min(logEntries.length, 20)} alerts`;
+        }
+
+        function updateDrift() {
+            document.getElementById('driftValue').textContent = driftScore.toFixed(0);
+            const angle = (driftScore / 100) * 180;
+            const fill = document.getElementById('driftFill');
+            fill.style.clipPath = `polygon(0 100%, 0 0, ${50 + angle/3.6}% 0, 50% 100%)`;
+            if (driftScore > 50) {
+                fill.style.borderColor = 'var(--danger)';
+                document.getElementById('driftValue').style.color = 'var(--danger)';
+            } else if (driftScore > 30) {
+                fill.style.borderColor = 'var(--warning)';
+                document.getElementById('driftValue').style.color = 'var(--warning)';
+            } else {
+                fill.style.borderColor = 'var(--success)';
+                document.getElementById('driftValue').style.color = 'var(--success)';
+            }
+        }
+
+        function resetMonitor() {
+            stopMonitor();
+            portfolioValue = 247.8;
+            activeLoans = 5142;
+            defaultRate = 1.8;
+            alertCount = 0;
+            driftScore = 12;
+            logEntries = [];
+
+            document.getElementById('portfolioValue').textContent = '$0M';
+            document.getElementById('activeLoans').textContent = '0';
+            document.getElementById('defaultRate').textContent = '0.0%';
+            document.getElementById('alertsValue').textContent = '0';
+            document.getElementById('scanLatency').textContent = '—';
+            document.getElementById('driftValue').textContent = '—';
+            document.getElementById('alertLog').innerHTML = `
+                <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">
+                    Start monitoring to see live alerts
+                </div>`;
+            document.getElementById('logCount').textContent = '0 alerts';
+            generatePortfolioGrid();
+            updateCohortChart();
+            showToast('Reset Complete', 'Portfolio reseeded');
+        }
+
+        function injectDefault() {
+            const cells = document.querySelectorAll('.loan-cell');
+            const idx = Math.floor(Math.random() * cells.length);
+            cells[idx].classList.remove('healthy', 'warning', 'risk');
+            cells[idx].classList.add('default');
+            alertCount++;
+            document.getElementById('alertsValue').textContent = alertCount;
+            const merchant = merchants[Math.floor(Math.random() * merchants.length)];
+            const sector = sectors[Math.floor(Math.random() * sectors.length)];
+            addLogEntry('🔴', 'Default Injected', `${merchant} • ${sector}`, '-$' + (15 + Math.random() * 40).toFixed(1) + 'K', '');
+            showToast('🔴 Default Injected', `${merchant} flagged for charge-off`);
+        }
+
+        function triggerAnomaly() {
+            // Burst of warning cells in cluster
+            const cells = document.querySelectorAll('.loan-cell');
+            const start = Math.floor(Math.random() * (cells.length - 12));
+            for (let i = 0; i < 12; i++) {
+                cells[start + i].classList.remove('healthy', 'warning');
+                cells[start + i].classList.add(i < 3 ? 'default' : 'risk');
+            }
+            alertCount += 3;
+            document.getElementById('alertsValue').textContent = alertCount;
+            driftScore = Math.min(85, driftScore + 25);
+            updateDrift();
+            const sector = sectors[Math.floor(Math.random() * sectors.length)];
+            addLogEntry('🚨', 'Sector Anomaly Cluster', `${sector} • 12 loans co-moved`, 'σ=4.2', '');
+            showToast('🚨 Sector Anomaly', `Cluster risk detected in ${sector}`);
+        }
+
+        function showToast(title, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

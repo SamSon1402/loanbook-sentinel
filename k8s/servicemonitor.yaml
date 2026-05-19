@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: loanbook-sentinel
+  namespace: orbii
+  labels:
+    app: loanbook-sentinel
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: loanbook-sentinel
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      honorLabels: true

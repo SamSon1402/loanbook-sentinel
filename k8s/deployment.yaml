@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loanbook-sentinel
+  namespace: orbii
+  labels:
+    app: loanbook-sentinel
+    component: ml-api
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: loanbook-sentinel
+  template:
+    metadata:
+      labels:
+        app: loanbook-sentinel
+        component: ml-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: loanbook-sentinel
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Pull the ONNX model from object storage into an emptyDir before the
+      # API container starts. In real life this would be an S3/GCS sync.
+      initContainers:
+        - name: model-loader
+          image: curlimages/curl:8.10.1
+          command:
+            - sh
+            - -c
+            - |
+              curl -fsSL "$MODEL_URL" -o /models/anomaly.onnx
+              ls -lh /models
+          env:
+            - name: MODEL_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: loanbook-sentinel-config
+                  key: MODEL_URL
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      containers:
+        - name: api
+          image: ghcr.io/orbii/loanbook-sentinel:0.3.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: loanbook-sentinel-config
+            - secretRef:
+                name: loanbook-sentinel-secrets
+          env:
+            - name: SENTINEL_MODEL_PATH
+              value: /models/anomaly.onnx
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: models
+          emptyDir:
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: loanbook-sentinel
+  namespace: orbii

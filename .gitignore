@@ -1,0 +1,34 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.log
+
+# Local DB
+*.db
+*.db-journal
+
+# Trained models (regenerate with `make bootstrap`)
+models/*.onnx
+models/*.joblib
+
+# Env
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store

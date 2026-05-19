@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loanbook-sentinel-config
+  namespace: orbii
+data:
+  SENTINEL_ENV: production
+  SENTINEL_LOG_LEVEL: INFO
+  SENTINEL_LOG_JSON: "true"
+  SENTINEL_ANOMALY_THRESHOLD: "-0.15"
+  SENTINEL_SCAN_INTERVAL_SECONDS: "300"
+  SENTINEL_DPD_WARNING_DAYS: "30"
+  SENTINEL_DPD_DEFAULT_DAYS: "90"
+  SENTINEL_METRICS_ENABLED: "true"
+  SENTINEL_CORS_ORIGINS: "https://app.orbii.ai,https://internal.orbii.ai"
+  MODEL_URL: "https://artifacts.orbii.ai/models/anomaly/v0.3.1.onnx"
