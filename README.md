@@ -164,9 +164,4 @@ make coverage   # pytest --cov=src/sentinel
 
 ---
 
-## Authoring
 
-Built by **Sam (samson1402)** as a portfolio piece for Orbii's AI Product
-Engineer role. The code is intentionally lean — every file demonstrates a
-production pattern (DI, async ORM, metrics, ONNX serving, K8s manifests, CI)
-rather than chasing line-count.
